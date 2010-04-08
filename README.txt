@@ -1,22 +1,22 @@
+Ingres is a feature rich and robust database (RDBMS)
 
+It is licensed under the GPL license, version 2.
 
 Supported Platforms
 ===================
 
-We intend to support the build on all major distributions and operating systems.
-
-Please note: As of April 29, 2008 only Fedora Core 8 - 32 bit builds and runs
-cleanly with no issues. 
-
-Other platforms including Ubuntu (32 bit/64 bit), Fedora (64 bit), Suse,
-Windows, and MacOS are almost clean. If you run into an issue, please check
-http://bugs.ingres.com to see if the issue is an existing one.
+For more information on building Ingres, including supported platforms see:
+http://community.ingres.com/wiki/Building_Ingres_FAQ
 
 If it is a new issue, please raise a ticket. Thank you.
 
 
 To get the latest version of Ingres server source code:
 =======================================================
+
+This git repository is a clone of subversion currently.
+
+To get the latest code:
 
 svn co http://code.ingres.com/ingres/main ~/ingres/server
 (this will create a copy of the latest code in ~/ingres/server)
