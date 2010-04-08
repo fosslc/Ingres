@@ -1,0 +1,7 @@
+*.o
+*.efr
+*.sc
+*.roc
+Jamdbg
+Jamfile
+VERS
